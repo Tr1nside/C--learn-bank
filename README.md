@@ -21,8 +21,26 @@ flowchart TD
 
 ### Домены
 
+```bash
 Account (абстракция)
 ├── CreditAccount — кредитный счёт
 └── DebitAccount — дебетовый  счёт
 Transaction — запись операции
 Customer — клиент
+```
+
+## Файлы
+
+```bash
+C#-learn-bank/
+├── src/
+│   ├── Domain/
+│   ├── Application/
+│   ├── Infrastructure/
+│   ├── UI/
+├── Tests/
+├── Program.cs
+├── CSharpLearnBank.csproj
+├── LICENCE
+└── README.md
+```
