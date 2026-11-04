@@ -7,7 +7,7 @@ namespace LearnBank.Domain;
 public abstract class Account
 {
 	/// <summary>
-	/// Уникальный идентификатор счёта
+	/// Уникальный идентификатор счёта.
 	/// </summary>
 	public Guid Id { get; }
 
@@ -30,7 +30,7 @@ public abstract class Account
 	}
 
 	/// <summary>
-	/// Вносит сумма на баланс счёта.
+	/// Вносит сумму на баланс счёта.
 	/// </summary>
 	/// <param name="amount">Сумма пополнения, строго больше нуля.</param>
 	/// <exception cref="ArgumentOutOfRangeException">Сумма пополнения не больше нуля.</exception>
@@ -42,8 +42,8 @@ public abstract class Account
 	}
 
 	/// <summary>
-	/// Снимает деньги со счета. Логику работы определяет реализация конкретного счёта.
+	/// Снимает деньги со счёта. Логику работы определяет реализация конкретного счёта.
 	/// </summary>
-	/// <param name="amount">Сумма снятия, строго больше нуля</param>
+	/// <param name="amount">Сумма снятия, строго больше нуля.</param>
 	public abstract void Withdraw(decimal amount);
 }

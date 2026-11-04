@@ -1,21 +1,21 @@
 namespace LearnBank.Domain;
 
 /// <summary>
-/// Кредитный счёт. Операции в пределах кредитног лимита.
-/// Баланс не может быть ниже лимита.
+/// Кредитный счёт. Операции в пределах кредитного лимита.
+/// Баланс не может опускаться ниже <c>-Limit</c>.
 /// </summary>
 public class CreditAccount : Account
 {
 	/// <summary>
 	/// Кредитный лимит.
 	/// </summary>
-	public decimal Limit { get; private set; }
+	public decimal Limit { get; }
 
 	public CreditAccount(string number, decimal limit, decimal initialBalance = 0m)
 		: base(number, initialBalance)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(number);
-		ArgumentOutOfRangeException.ThrowIfNegative(limit);
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit);
 		ArgumentOutOfRangeException.ThrowIfNegative(limit + initialBalance);
 		Limit = limit;
 	}
