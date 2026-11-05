@@ -1,6 +1,13 @@
 namespace LearnBank.Infrastructure;
 
-interface IIdGenerator
+/// <summary>
+/// Абстракция генератора идентификаторов. Позволяет управлять идентификаторами в тестах.
+/// </summary>
+public interface IIdGenerator
 {
-    Guid NewId();
+	/// <summary>
+	/// Создаёт новый уникальный идентификатор.
+	/// </summary>
+	/// <returns>Новый идентификатор.</returns>
+	Guid NewId();
 }

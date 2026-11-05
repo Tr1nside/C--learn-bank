@@ -1,9 +1,13 @@
 namespace LearnBank.Infrastructure;
 
-class GuidGenerator : IIdGenerator
+/// <summary>
+/// Генератор идентификаторов на основе <see cref="Guid.NewGuid"/>.
+/// </summary>
+public class GuidGenerator : IIdGenerator
 {
-    public Guid NewId()
-    {
-        return Guid.NewGuid();
-    }
+	/// <inheritdoc/>
+	public Guid NewId()
+	{
+		return Guid.NewGuid();
+	}
 }

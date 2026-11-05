@@ -4,13 +4,36 @@ namespace LearnBank.Domain;
 /// Запись о выполненной операции. Сумма всегда положительная,
 /// направление задают <see cref="FromAccountId"/> и <see cref="ToAccountId"/>.
 /// </summary>
-public sealed class Transaction
+public sealed class Transaction : IEntity
 {
+	/// <summary>
+	/// Уникальный идентификатор транзакции.
+	/// </summary>
 	public Guid Id { get; }
+
+	/// <summary>
+	/// Дата и время выполнения операции.
+	/// </summary>
 	public DateTime Date { get; }
+
+	/// <summary>
+	/// Тип операции.
+	/// </summary>
 	public TransactionType Type { get; }
+
+	/// <summary>
+	/// Сумма операции. Всегда положительная.
+	/// </summary>
 	public decimal Amount { get; }
+
+	/// <summary>
+	/// Идентификатор счёта-источника. <see langword="null"/> для пополнения и начисления процентов.
+	/// </summary>
 	public Guid? FromAccountId { get; }
+
+	/// <summary>
+	/// Идентификатор счёта-получателя. <see langword="null"/> для снятия.
+	/// </summary>
 	public Guid? ToAccountId { get; }
 
 	public Transaction(
@@ -85,10 +108,28 @@ public sealed class Transaction
 	}
 }
 
+/// <summary>
+/// Тип транзакции.
+/// </summary>
 public enum TransactionType
 {
+	/// <summary>
+	/// Пополнение счёта.
+	/// </summary>
 	Deposit,
+
+	/// <summary>
+	/// Снятие средств со счёта.
+	/// </summary>
 	Withdraw,
+
+	/// <summary>
+	/// Перевод между счетами.
+	/// </summary>
 	Transfer,
+
+	/// <summary>
+	/// Начисление процентов.
+	/// </summary>
 	Interest,
 }

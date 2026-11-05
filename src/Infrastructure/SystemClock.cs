@@ -1,6 +1,10 @@
 namespace LearnBank.Infrastructure;
 
+/// <summary>
+/// Часы, возвращающие системное время.
+/// </summary>
 public class SystemClock : IClock
 {
-    public DateTime Now => DateTime.Now;
+	/// <inheritdoc/>
+	public DateTime Now => DateTime.Now;
 }

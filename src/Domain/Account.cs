@@ -4,7 +4,7 @@ namespace LearnBank.Domain;
 /// Абстрактный класс счёта. Хранит идентификатор, баланс и номер.
 /// Правила снятия определяет конкретный класс счёта.
 /// </summary>
-public abstract class Account
+public abstract class Account : IEntity
 {
 	/// <summary>
 	/// Уникальный идентификатор счёта.

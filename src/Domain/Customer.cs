@@ -3,7 +3,7 @@ namespace LearnBank.Domain;
 /// <summary>
 /// Клиент. Хранит свои счета, может добавлять и удалять их.
 /// </summary>
-public class Customer
+public class Customer : IEntity
 {
 	/// <summary>
 	/// Уникальный идентификатор клиента.

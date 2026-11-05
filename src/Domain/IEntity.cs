@@ -1,6 +1,12 @@
 namespace LearnBank.Domain;
 
-interface IEntity
+/// <summary>
+/// Сущность, у которой есть уникальный идентификатор.
+/// </summary>
+public interface IEntity
 {
-    public Guid Id { get; }
+	/// <summary>
+	/// Уникальный идентификатор сущности.
+	/// </summary>
+	Guid Id { get; }
 }

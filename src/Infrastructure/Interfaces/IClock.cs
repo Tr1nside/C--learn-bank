@@ -1,6 +1,12 @@
 namespace LearnBank.Infrastructure;
 
-interface IClock
+/// <summary>
+/// Абстракция текущего времени. Позволяет подставлять фиксированное время в тестах.
+/// </summary>
+public interface IClock
 {
-    DateTime Now { get; }
+	/// <summary>
+	/// Текущее время.
+	/// </summary>
+	DateTime Now { get; }
 }
