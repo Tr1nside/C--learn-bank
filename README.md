@@ -22,6 +22,7 @@
 flowchart TD
     U[UI] --> A
     A[App] --> D
+    A[App] --> I
     I[Infrastructure] --> D
     D[Domain]
 ```
@@ -30,6 +31,74 @@ flowchart TD
 - **App** — сценарии: переводы, проценты, отчёты (`BankService`).
 - **Infrastructure** — логирование, время, генерация id и так далее.
 - **Domain** — сущности и правила: `Account`, `Customer`, `Transaction` и другие.
+
+## Поток выполнения
+
+Единственная точка входа — `Program.Main` (composition root).
+
+```text
+Запуск процесса
+  └─> Program.Main()
+        ├─ создать ConsoleLogger (реализация ILogger)
+        ├─ try:
+        │    └─> Compose(logger)              // сборка графа зависимостей
+        │          ├─ new SystemClock()            : IClock
+        │          ├─ new GuidGenerator()          : IIdGenerator
+        │          ├─ new InMemoryRepository<Account>() : IRepository<Account>
+        │          ├─ new BankService(accounts, clock, ids, logger)
+        │          └─ new ConsoleMenu(service, logger)
+        │    └─> menu.Run()                   // запуск UI
+        │          └─> BankService.<сценарии>
+        └─ catch (Exception ex):
+              └─> logger.Error(...)           // централизованная обработка
+Завершение процесса
+```
+
+Направление зависимостей строго внутрь: `UI → App → Domain`, `Infrastructure → Domain`.
+
+### Composition root
+
+Все зависимости внедряются через конструкторы.
+
+```csharp
+private static ConsoleMenu Compose(ILogger logger)
+{
+    IClock clock = new SystemClock();
+    IIdGenerator ids = new GuidGenerator();
+    IRepository<Account> accounts = new InMemoryRepository<Account>();
+
+    var service = new BankService(accounts, clock, ids, logger);
+    return new ConsoleMenu(service, logger);
+}
+```
+
+`Compose()` — единственное место, где конкретные классы инфраструктуры связываются с портами:
+
+```mermaid
+flowchart TD
+    P["Program / Compose()<br/>(composition root)"]
+
+    P -->|"new"| SC["SystemClock"]
+    P -->|"new"| GG["GuidGenerator"]
+    P -->|"new"| IR["InMemoryRepository&lt;Account&gt;"]
+    P -->|"new"| CL["ConsoleLogger"]
+
+    SC -.->|"IClock"| BS["BankService"]
+    GG -.->|"IIdGenerator"| BS
+    IR -.->|"IRepository&lt;Account&gt;"| BS
+    CL -.->|"ILogger"| BS
+
+    BS -->|"сценарии"| UI["ConsoleMenu"]
+    CL -.->|"ILogger"| UI
+```
+
+### Прикладной цикл
+
+```text
+меню → выбор команды → BankService → доменные сущности + репозиторий → результат в UI
+```
+
+Ошибки домена ловятся на уровне UI/App и показываются пользователю.
 
 ## Доменная модель
 
@@ -107,7 +176,96 @@ Customer            клиент
 - `IInterestBearing` — «умеет начислять проценты».
 - `IRepository<T>` — абстракция хранения (JSON, память, БД, фейк в тестах).
 - `ILogger`, `IClock` — точки расширения и тестируемости, чтобы не звать `DateTime` и `Console` напрямую.
+- `IIdGenerator` — генерация идентификаторов, чтобы в тестах получать предсказуемые id.
 - Событие `TransactionCompleted` — на него подписываются логирование и аудит; сервис не знает, кто реагирует.
+
+### Infrastructure
+
+Конкретные реализации портов. Каждая живёт в своей папке (`Persistence/`, `Time/`, `Logging/`, `Identity/`).
+
+```mermaid
+classDiagram
+    direction LR
+
+    class IRepository~T~ {
+        <<interface>>
+        +GetById(id) T
+        +GetAll() IReadOnlyCollection~T~
+        +Add(entity) void
+    }
+    class IClock {
+        <<interface>>
+        +DateTime Now
+    }
+    class ILogger {
+        <<interface>>
+        +Info(message) void
+        +Warn(message) void
+        +Error(message, exception) void
+    }
+    class IIdGenerator {
+        <<interface>>
+        +NewId() Guid
+    }
+
+    class InMemoryRepository~T~ {
+        -Dictionary~Guid,T~ _items
+        +GetById(id) T
+        +GetAll() IReadOnlyCollection~T~
+        +Add(entity) void
+    }
+    class SystemClock {
+        +DateTime Now
+    }
+    class ConsoleLogger {
+        +Info(message) void
+        +Warn(message) void
+        +Error(message, exception) void
+    }
+    class GuidGenerator {
+        +NewId() Guid
+    }
+
+    InMemoryRepository~T~ ..|> IRepository~T~ : implements
+    SystemClock ..|> IClock : implements
+    ConsoleLogger ..|> ILogger : implements
+    GuidGenerator ..|> IIdGenerator : implements
+```
+
+### Service (Application)
+
+`BankService` знает только порты, а не их реализации. Конкретику подставляет composition root.
+
+```mermaid
+classDiagram
+    direction TB
+
+    class BankService {
+        -IRepository~Account~ _accounts
+        -IClock _clock
+        -IIdGenerator _ids
+        -ILogger _logger
+        +BankService(accounts, clock, ids, logger)
+    }
+
+    class IRepository~Account~ {
+        <<interface>>
+    }
+    class IClock {
+        <<interface>>
+    }
+    class IIdGenerator {
+        <<interface>>
+    }
+    class ILogger {
+        <<interface>>
+    }
+
+    BankService --> IRepository~Account~ : accounts
+    BankService --> IClock : clock
+    BankService --> IIdGenerator : ids
+    BankService --> ILogger : logger
+```
 
 ## Структура проекта
 
@@ -133,14 +291,14 @@ dotnet build
 dotnet run
 ```
 
-> На текущем этапе `Program.cs` ещё пуст, поэтому сборка падает с `CS5001` (нет точки входа) —
-> это ожидаемо, пока не реализованы `BankService` и меню.
+> Точка входа (`Program.Main` / composition root) реализуется в рамках инфраструктурного этапа
+> вместе с `BankService` и консольным меню.
 
 ## Форматирование
 
 ```bash
 dotnet tool install -g csharpier
-dotnet csharpier .
+csharpier format .
 ```
 
 Настройки в `.csharpierrc.json`.
