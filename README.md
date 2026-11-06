@@ -41,9 +41,12 @@ flowchart TD
         ├─ создать ConsoleLogger (реализация ILogger)
         ├─ try:
         │    └─> Compose(logger)              // сборка графа зависимостей
-        │          ├─ new SystemClock()            : IClock
-        │          ├─ new InMemoryRepository<Account>() : IRepository<Account>
-        │          ├─ new BankService(accounts, clock, logger)
+        │          ├─ new SystemClock()                    : IClock
+        │          ├─ new InMemoryRepository<Account>()     : IRepository<Account>
+        │          ├─ new InMemoryRepository<Customer>()    : IRepository<Customer>
+        │          ├─ new InMemoryRepository<Transaction>() : IRepository<Transaction>
+        │          ├─ new TransactionRecorder(transactions, clock, logger)
+        │          ├─ new BankService(customers, accounts, transfers, interest, reports)
         │          └─ new ConsoleMenu(service, logger)
         │    └─> menu.Run()                   // запуск UI
         │          └─> BankService.<сценарии>
@@ -63,8 +66,18 @@ private static ConsoleMenu Compose(ILogger logger)
 {
     IClock clock = new SystemClock();
     IRepository<Account> accounts = new InMemoryRepository<Account>();
+    IRepository<Customer> customers = new InMemoryRepository<Customer>();
+    IRepository<Transaction> transactions = new InMemoryRepository<Transaction>();
 
-    var service = new BankService(accounts, clock, logger);
+    var recorder = new TransactionRecorder(transactions, clock, logger);
+
+    var service = new BankService(
+        new CustomerService(customers),
+        new AccountService(accounts, customers, recorder),
+        new TransferService(accounts, recorder),
+        new InterestService(accounts, recorder),
+        new ReportService(accounts, customers, transactions)
+    );
     return new ConsoleMenu(service, logger);
 }
 ```
@@ -76,11 +89,15 @@ flowchart TD
     P["Program / Compose()<br/>(composition root)"]
 
     P -->|"new"| SC["SystemClock"]
-    P -->|"new"| IR["InMemoryRepository&lt;Account&gt;"]
+    P -->|"new"| AR["InMemoryRepository&lt;Account&gt;"]
+    P -->|"new"| CR["InMemoryRepository&lt;Customer&gt;"]
+    P -->|"new"| TR["InMemoryRepository&lt;Transaction&gt;"]
     P -->|"new"| CL["ConsoleLogger"]
 
     SC -.->|"IClock"| BS["BankService"]
-    IR -.->|"IRepository&lt;Account&gt;"| BS
+    AR -.->|"IRepository"| BS
+    CR -.->|"IRepository"| BS
+    TR -.->|"IRepository"| BS
     CL -.->|"ILogger"| BS
 
     BS -->|"сценарии"| UI["ConsoleMenu"]
@@ -90,7 +107,7 @@ flowchart TD
 ### Прикладной цикл
 
 ```text
-меню → выбор команды → BankService → доменные сущности + репозиторий → результат в UI
+меню → выбор команды → BankService.<под-фасад> → доменные сущности + репозиторий → результат в UI
 ```
 
 Ошибки домена ловятся на уровне UI/App и показываются пользователю.
@@ -220,23 +237,46 @@ classDiagram
 
 ### Service (Application)
 
-`BankService` знает только порты, а не их реализации. Конкретику подставляет composition root.
+`BankService` — фасад прикладного слоя. Он не содержит бизнес-логики: агрегирует
+под-фасады, каждый из которых отвечает за свой сценарий (деление по use case).
+
+```text
+BankService
+├── Customers : CustomerService   регистрация и поиск клиентов
+├── Accounts  : AccountService    открытие счетов, пополнение, снятие
+├── Transfers : TransferService   переводы между счетами
+├── Interest  : InterestService   начисление процентов
+└── Reports   : ReportService     выписки и итоговые балансы
+```
+
+Под-фасады знают только порты (`IRepository<T>`, `IClock`, `ILogger`), а не их реализации.
+Сквозная логика — запись `Transaction`, событие `TransactionCompleted` и логирование —
+вынесена в общий коллаборатор `TransactionRecorder`, чтобы не дублировать её в каждом под-фасаде:
 
 ```mermaid
 classDiagram
     direction TB
 
     class BankService {
-        -IRepository~Account~ _accounts
-        -IClock _clock
-        -ILogger _logger
-        +BankService(accounts, clock, logger)
-        +
-        +
-        +
+        +CustomerService Customers
+        +AccountService Accounts
+        +TransferService Transfers
+        +InterestService Interest
+        +ReportService Reports
     }
 
-    class IRepository~Account~ {
+    class CustomerService
+    class AccountService
+    class TransferService
+    class InterestService
+    class ReportService
+
+    class TransactionRecorder {
+        +Record(type, amount, from, to) Transaction
+        +event TransactionCompleted
+    }
+
+    class IRepository~T~ {
         <<interface>>
     }
     class IClock {
@@ -246,10 +286,27 @@ classDiagram
         <<interface>>
     }
 
-    BankService --> IRepository~Account~ : accounts
-    BankService --> IClock : clock
-    BankService --> ILogger : logger
+    BankService --> CustomerService
+    BankService --> AccountService
+    BankService --> TransferService
+    BankService --> InterestService
+    BankService --> ReportService
+
+    CustomerService --> IRepository~T~ : customers
+    AccountService --> IRepository~T~ : accounts
+    TransferService --> IRepository~T~ : accounts
+    InterestService --> IRepository~T~ : accounts
+    ReportService --> IRepository~T~ : accounts, customers, transactions
+
+    AccountService --> TransactionRecorder
+    TransferService --> TransactionRecorder
+    InterestService --> TransactionRecorder
+
+    TransactionRecorder --> IClock
+    TransactionRecorder --> ILogger
 ```
+
+UI зависит только от `BankService`; конкретику подставляет composition root.
 
 ## Структура проекта
 
@@ -257,7 +314,7 @@ classDiagram
 C#-learn-bank/
 ├── src/
 │   ├── Domain/             Account, Customer, Transaction, интерфейсы домена
-│   ├── Application/        BankService, сценарии, отчёты (Reports/)
+│   ├── Application/        BankService-агрегатор, под-фасады (Customers, Accounts, Transfers, Interest, Reports)
 │   ├── Infrastructure/     Persistence/, Logging/, Time/
 │   └── UI/                 консольное меню
 ├── Tests/                  юнит-тесты (будет добавлен)
