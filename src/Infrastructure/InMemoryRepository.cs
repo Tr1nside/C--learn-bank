@@ -1,6 +1,6 @@
 using LearnBank.Domain;
 
-namespace LearnBank.Infrastructure.Persistence;
+namespace LearnBank.Infrastructure;
 
 /// <summary>
 /// Реализация <see cref="IRepository{T}"/> в памяти. Подходит для тестов и первых сценариев.

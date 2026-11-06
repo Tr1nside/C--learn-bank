@@ -1,4 +1,5 @@
-﻿using LearnBank.Infrastructure;
+﻿using LearnBank.Domain;
+using LearnBank.Infrastructure;
 
 namespace LearnBank;
 
@@ -13,11 +14,10 @@ public static class Program
 	public static void Main()
 	{
 		IClock clock = new SystemClock();
-		IIdGenerator ids = new GuidGenerator();
 		ILogger logger = new ConsoleLogger();
+		IRepository<Account> accounts = new InMemoryRepository<Account>();
 
 		logger.Info($"Now: {clock.Now:O}");
-		logger.Info($"Id:  {ids.NewId()}");
 
 		try
 		{
@@ -29,4 +29,12 @@ public static class Program
 			logger.Error("Демонстрация уровня ошибки", ex);
 		}
 	}
+	// private static ConsoleMenu Compose(ILogger logger)
+	// {
+	//     IClock clock = new SystemClock();
+	//     IRepository<Account> accounts = new InMemoryRepository<Account>();
+
+	//     var service = new BankService(accounts, clock, logger);
+	//     return new ConsoleMenu(service, logger);
+	// }
 }
